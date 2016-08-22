@@ -2,8 +2,8 @@ import sys
 import numpy as np
 import network_module as nm
 
-# seq = sys.argv[1:]
-seq = ['c', '5', '10', 'f', '10']
+seq = sys.argv[1:]
+# seq = ['c', '5', '10', 'f', '10']
 i = 0
 
 
@@ -19,11 +19,9 @@ while i < len(seq):
     if seq[i] == 'c':
         netname += '-c{}x{}'.format(seq[i+1],  seq[i+2])
         i += 3
-        continue
     elif seq[i] == 'f':
         netname += '-f{}'.format(seq[i+1])
         i += 2
-        continue
     else:
         print 'WARNING: Expected layer flag, got instead: \'' + seq[i] + '\''
         i += 1
@@ -61,12 +59,10 @@ while i < len(seq):
     if seq[i] == 'c':
         nn.add_conv(int(seq[i+1]), (int(seq[i+2]), int(seq[i+2])))
         i += 3
-        continue
     elif seq[i] == 'f':
         nn.add_shaper(np.prod(nn[-1].shape))
         nn.add_full(int(seq[i+1]))
         i += 2
-        continue
     else:
         print 'WARNING: Expected layer flag, got instead: \'' + seq[i] +'\''
         i += 1
