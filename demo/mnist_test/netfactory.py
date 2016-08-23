@@ -69,7 +69,8 @@ while i < len(seq):
 
     nn.add_activation('relu')
 
-
+nn.pop_top_layer()
+nn.add_activation('tanh')
 nn.add_shaper(np.prod(nn[-1].shape))
 nn.add_full(10)
 #########################
@@ -81,13 +82,13 @@ result = []
 def print_test():
     train_score = nn.test_eval(train)
     test_score = nn.test_eval(test)
-    print nn.last_epoch, train, test
-    result.append(train_score, test_score)
+    print nn.last_epoch, train_score, test_score
+    result.append((train_score, test_score))
 
 
 print 'Training network', netname
 nn.SGD(train_policy=nn.fix_epoch, training_set=train,
-       batch=16, rate=0.05, epoch_call_back=print_test, epoch=4)
+       batch=16, rate=0.05, epoch_call_back=print_test, epoch=25)
 
 print 'Saving results to {}.res'.format(netname)
 print_csv('./results/{}.res'.format(netname), result)
