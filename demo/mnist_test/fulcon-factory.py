@@ -63,7 +63,7 @@ def print_test():
 
 print 'Training network', netname
 nn.SGD(train_policy=nn.fix_epoch, training_set=train,
-       batch=16, rate=0.05, epoch_call_back=print_test, epoch=4)
+       batch=16, rate=0.05, epoch_call_back=print_test, epoch=25)
 
 print 'Saving results to {}.res'.format(netname)
 print_csv('./results/{}.res'.format(netname), result)

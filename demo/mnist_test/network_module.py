@@ -141,7 +141,9 @@ class network(object):
             num_of_batches = len(input_set)/batch
             for b in xrange(num_of_batches):
                 'FORWARD'
-                self.get_output(input_set[b::num_of_batches])
+                test = np.sum(self.get_output(input_set[b::num_of_batches]))
+                assert not (np.isnan(test) or np.isinf(test)),\
+                    "NaN found in output during train- shutting down..."
 
                 'BACKWARD'
                 self.input.backprop(target_set[b::num_of_batches])
