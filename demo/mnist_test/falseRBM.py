@@ -26,24 +26,22 @@ print 'Loading MNIST images...'
 train, valid, test = loadmnist()
 
 # truncating sets
-trunc=100
-train = (train[0][0:trunc], train[1][0:trunc])
-valid = (valid[0][0:trunc/10], valid[1][0:trunc/10])
+trunc = 1000
+train = (train[0][0:trunc], train[0][0:trunc])
+valid = (valid[0][0:trunc/10], valid[0][0:trunc/10])
 print 'constructing network'
 #########################
 # NETWORK DEFINITION
-nn = nm.network(in_shape=train[0][0].shape, criterion='softmax')
-nn.add_conv(3, (9, 9))
-nn.add_maxpool(pool_shape=(2, 2))
-nn.add_activation('relu')
-nn.add_conv(3, (3, 3))
-# # nn.add_maxpool(pool_shape=(2, 2))
-# nn.add_activation('tanh')
+nn = nm.network(in_shape=train[0][0].shape, criterion='MSE')
+nn.add_conv(3, (5, 5))
+nn.add_maxpool()
 nn.add_shaper(np.prod(nn[-1].shape))
-
-nn.add_activation('tanh')
-
+nn.add_activation('relu')
 nn.add_full(10)
+nn.add_activation('relu')
+nn.add_full(784)
+
+nn.add_shaper(train[0][0].shape)
 #########################
 print nn
 
@@ -51,17 +49,15 @@ result = []
 
 
 def print_test():
-    print nn.last_epoch, ' ', nn.test_eval(valid)
-    result.append((nn.test_eval(train), nn.test_eval(valid)))
+    # print nn.last_epoch, ' ', nn.test_eval(train)
+    print(nn.last_epoch, nn.output.get_crit(train[0][0], train[0][0]))
 
-
-print 'Training network... '
-nn.SGD(train_policy=nn.fix_epoch, training_set=train,
-       batch=16, rate=0.05, epoch_call_back=print_test, epoch=10)
 
 
 def imshow(im, cmap='Greys_r', interpol='None'):
     import matplotlib.pyplot as plt
+    if len(im.squeeze().shape) > 2:
+        im = im.squeeze()
     if len(im.shape) == 3:
         for i, x in enumerate(im, 1):
             plt.subplot(1, len(im), i)
@@ -104,3 +100,10 @@ def __main__():
 if __name__ == '__main__':
     main()
     
+
+print 'Training network... '
+nn.SGD(train_policy=nn.fix_epoch, training_set=train,
+       batch=10, rate=0.005, epoch_call_back=print_test, epoch=100)
+
+xy = np.array([train[0][0:10], nn.get_output(train[0][0:10]),
+               train[0][10:20], nn.get_output(train[0][10:20])])

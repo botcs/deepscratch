@@ -55,7 +55,8 @@ class AbstractLayer:
 
     def get_delta(self, target):
         if self.next:
-            self.delta = self.next.backprop(target)
+            # clip to mitigate exploding gradients
+            self.delta = np.clip(self.next.backprop(target), -5, 5)
             return self.delta
 
         return target
@@ -112,6 +113,23 @@ class fully_connected(AbstractLayer):
         return (np.mean([np.outer(i, d) for i, d in
                          zip(self.input, self.delta)], axis=0).T,
                 np.mean(self.delta, axis=0))
+
+    def L2train(self, rate, reg):
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * (reg * self.weights + w_grad)
+        self.bias -= rate * b_grad
+
+    def L1train(self, rate, reg):
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * (reg * np.sign(self.weights) + w_grad)
+        self.bias -= rate * b_grad
+
+    def L05train(self, rate, reg):
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * (reg * self.weights /
+                                np.power(self.weights, 3/2.) + w_grad)
+        self.bias -= rate * b_grad
+        
 
     def SGDtrain(self, rate):
         '''GRADIENT DESCENT TRAINING'''
@@ -241,7 +259,7 @@ class output(activation):
 
     crit = {
         'MSE': lambda (prediction, target):
-            0.5 * np.dot(prediction - target, prediction - target),
+            0.5 * np.sum((prediction - target)**2),
         'softmax': lambda (prediction, target):
             np.dot(-target, np.log(prediction))
     }

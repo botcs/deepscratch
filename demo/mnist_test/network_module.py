@@ -87,7 +87,7 @@ class network(object):
         return res
 
     def load(self, load):
-        return cPickle.load(open(load, 'rb'))
+        return dill.load(open(load, 'rb'))
 
     def __init__(self, in_shape, criterion, **kwargs):
         self.input = lm.input(in_shape)
@@ -114,13 +114,20 @@ class network(object):
 
     'NETWORK TRAINING METHODS'
     def SGD(self, train_policy, training_set,
-            batch, rate,
+            batch, rate, L2=False, L1=False, L05=False,
             validation_set=None, epoch_call_back=None, **kwargs):
 
         for l in self.layerlist:
             'Set the training method for layers where it is implemented'
             try:
-                l.train = l.SGDtrain
+                if L2:
+                    l.train = l.L2train
+                elif L1:
+                    l.train = l.L1train
+                elif L05:
+                    l.train = l.L05train
+                else:
+                    l.train = l.SGDtrain
             except AttributeError:
                 continue
 

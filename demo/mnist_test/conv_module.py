@@ -59,6 +59,7 @@ class Conv(lm.AbstractLayer):
               for d, k in zip(sample_delta, kernel_set)]
              for kernel_set in self.kernels]
             for sample_delta in delta], axis=2)
+        # saturating delta over 5 to prevent exploding gradient
 
     def get_param_grad(self):
         return (np.array(
