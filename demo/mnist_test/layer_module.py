@@ -67,7 +67,7 @@ class AbstractLayer:
     def backprop(self, target):
         return self.backprop_delta(self.get_delta(target))
 
-    def train(self, rate):
+    def train(self, rate, **kwargs):
         pass
 
     def __str__(self):
@@ -127,11 +127,11 @@ class fully_connected(AbstractLayer):
     def L05train(self, rate, reg):
         w_grad, b_grad = self.get_param_grad()
         self.weights -= rate * (reg * self.weights /
-                                np.power(self.weights, 3/2.) + w_grad)
+                                np.power(np.abs(self.weights), 3/2.) + w_grad)
         self.bias -= rate * b_grad
         
 
-    def SGDtrain(self, rate):
+    def SGDtrain(self, rate, reg):
         '''GRADIENT DESCENT TRAINING'''
         w_grad, b_grad = self.get_param_grad()
         self.weights -= rate * w_grad

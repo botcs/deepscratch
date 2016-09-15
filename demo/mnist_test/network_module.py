@@ -5,6 +5,10 @@ import dill
 from utilities import StatusBar, ensure_dir
 
 
+def load(load):
+    return dill.load(open(load, 'rb'))
+
+
 class network(object):
     '''Layer manager object
 
@@ -86,9 +90,6 @@ class network(object):
         res += '\n' + '-' * 30
         return res
 
-    def load(self, load):
-        return dill.load(open(load, 'rb'))
-
     def __init__(self, in_shape, criterion, **kwargs):
         self.input = lm.input(in_shape)
         self.top = self.input
@@ -114,11 +115,12 @@ class network(object):
 
     'NETWORK TRAINING METHODS'
     def SGD(self, train_policy, training_set,
-            batch, rate, L2=False, L1=False, L05=False,
+            batch, rate, L2=False, L1=False, L05=False, reg=0,
             validation_set=None, epoch_call_back=None, **kwargs):
 
         for l in self.layerlist:
             'Set the training method for layers where it is implemented'
+            assert L05 + L1 + L2 < 2, 'Regularisation cannot be mixed'
             try:
                 if L2:
                     l.train = l.L2train
@@ -150,7 +152,7 @@ class network(object):
 
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
-                    l.train(rate)
+                    l.train(rate=rate, reg=reg)
 
             if epoch_call_back:
                 'Some logging function is called here'
