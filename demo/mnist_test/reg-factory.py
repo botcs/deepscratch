@@ -17,7 +17,7 @@ parser.add_argument(
 parser.add_argument(
     'width', nargs='+', type=int
 )
-args = parser.parse_args(['50', '-L2', '0.01'])
+args = parser.parse_args()
 
 
 def print_csv(filename, data):
@@ -32,7 +32,7 @@ def print_csv(filename, data):
 # for width in layer_params:
 #     netname += '{}-'.format(width)
 # netname += '10'
-
+reg = 0
 L1 = False
 L2 = False
 L05 = False

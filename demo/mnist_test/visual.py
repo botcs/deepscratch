@@ -48,9 +48,10 @@ def imshow(im, cmap='Greys_r', interpol='None'):
     return im.shape
 
 
-def visualise_layer(lay_ind=4, top=9, iterations=10):
+def visualise_layer(lay_ind=4, top=9, iterations=1000):
     test = nn.grad_ascent(lay_ind, train[0], top, iterations)\
              .reshape((top,) + nn[lay_ind].shape + (28, 28))
+    test = np.concatenate((test, test.mean(axis=0)[np.newaxis, :]), axis=0)
     return test
 
 
