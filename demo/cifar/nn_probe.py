@@ -21,10 +21,26 @@ L1 = False
 L2 = False
 L05 = False
 netname = 'conv5-3x3-maxpool-100'
-
+data_source = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
 def loadcifar():
     import cPickle
+    import os.path
 
+    if not os.path.exists('./cifar-10-batches-py/data_batch_1'):
+        print 'Downloading train data from', data_source
+        import urllib
+        import tarfile
+        if not os.path.exists('./cifar-10-batches-py/'):
+            os.makedirs('./cifar-10-batches-py/')
+            
+        dest = "./cifar-10-batches-py/data.tar.gz"
+        urllib.urlretrieve(data_source, dest)
+        print 'unzipping train data'
+        tar = tarfile.open(dest, "r:gz")
+        tar.extractall()
+        tar.close()
+    
+    
     # Load the dataset
     f = open('./cifar-10-batches-py/data_batch_1', 'rb')
     train = cPickle.load(f)

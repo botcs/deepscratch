@@ -35,7 +35,7 @@ class Conv(lm.AbstractLayer):
 
             'For fully connected next layer'
             self.width = np.prod(self.shape)
-            self.bias = np.random.randn(*self.shape)
+            self.bias = np.random.randn(self.nof)
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray
@@ -51,10 +51,10 @@ class Conv(lm.AbstractLayer):
         feature map activation is evaluated by summing their activations
         for each sample in input batch'''
         return np.sum(
-            [[[convolve2d(channel, kernel, 'valid')
+            [[[convolve2d(channel, kernel, 'valid') + bias
                for kernel in kernel_set]
-              for channel, kernel_set in zip(sample, self.kernels)]
-             for sample in self.input], axis=1) + self.bias
+              for channel, kernel_set, bias in zip(sample, self.kernels, self.bias)]
+             for sample in self.input], axis=1)
 
     def backprop_delta(self, delta):
         '''Each feature map is the result of all previous layer maps,
@@ -74,7 +74,7 @@ class Conv(lm.AbstractLayer):
               for channel in sample_input]
              for sample_input, sample_delta in zip(self.input, self.delta)]),
             # BIAS GRAD
-            self.delta)
+            np.sum(self.delta, axis=(1, 2, 3)))
 
     def SGDtrain(self, rate, **kwargs):
         k_update, b_update = self.get_param_grad()
