@@ -248,6 +248,7 @@ class network(object):
         
         l = self[layer_ind]
         for e in xrange(epoch):
+            print '\r GA: ', e, '    '
             l.get_output(input)
             delta = self.backprop_one_hot(layer_ind, top).reshape(input.shape)
             input += rate * delta

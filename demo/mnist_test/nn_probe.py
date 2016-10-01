@@ -90,6 +90,8 @@ def imshow(im, cmap='Greys_r', interpol='None'):
             plt.subplot(1, len(im), i)
             plt.imshow(x.squeeze(), cmap=cmap, interpolation=interpol)
             plt.gca().xaxis.set_major_locator(plt.NullLocator())
+            plt.axis('off')
+    
     if len(im.shape) == 4:
         for irow, xrow in enumerate(im, 0):
             for icol, x in enumerate(xrow, 1):
@@ -97,6 +99,8 @@ def imshow(im, cmap='Greys_r', interpol='None'):
                 plt.subplot(len(im), len(xrow), irow * len(xrow) + icol)
                 plt.imshow(x.squeeze(), cmap=cmap, interpolation=interpol)
                 plt.gca().xaxis.set_major_locator(plt.NullLocator())
+                plt.axis('off')
+    
     plt.show()
     return im.shape
 

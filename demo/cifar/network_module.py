@@ -229,7 +229,9 @@ class network(object):
         map's [10:10] located neuron
 
         """
-
+        print 'Starting gradient ascent:'
+        print 'Finding inputs with top {} corresponding activations out of {} images'\
+              .format(top, len(activation_set))
         ind = self.max_act(layer_ind, activation_set, top)
 
         """retrieve those images from the activation_set, and forward them
@@ -247,7 +249,10 @@ class network(object):
         """
         
         l = self[layer_ind]
-        for e in xrange(epoch):
+        
+        for e in xrange(epoch):        
+            print '\r Enhancing top images: --- {} of {}'.format(e+1, epoch),
+            sys.stdout.flush()
             l.get_output(input)
             delta = self.backprop_one_hot(layer_ind, top).reshape(input.shape)
             input += rate * delta
