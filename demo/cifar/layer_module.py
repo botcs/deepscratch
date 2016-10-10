@@ -306,6 +306,7 @@ class output(activation):
 
 class wta(activation):
 
+    'K-WTA implementation - for flat batch input: (batch_size, prev_layer_width)'
     def __init__(self, k, **kwargs):
         activation.__init__(self, type='wta', **kwargs)
         self.k = k
@@ -321,7 +322,9 @@ class wta(activation):
     
         self.mask = np.zeros_like(input, dtype=bool)
         self.mask[i, ind] = True
-        return input * self.mask
+        
+        # prevent saturation when the layer is removed
+        return input * self.mask * (input.shape[1]/k)
 
     def backprop_delta(self, delta):
         return delta * self.mask 
