@@ -324,7 +324,7 @@ class wta(activation):
         self.mask[i, ind] = True
         
         # prevent saturation when the layer is removed
-        return input * self.mask * (input.shape[1]/k)
+        return input * self.mask * (input.shape[1]/self.k)
 
     def backprop_delta(self, delta):
         return delta * self.mask 
