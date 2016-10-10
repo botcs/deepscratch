@@ -233,6 +233,11 @@ class input(activation):
             warnings.simplefilter('always')
             activation.__init__(self, shape=shape,
                                 type='identity', **kwargs)
+                                
+    def get_local_output(self, input):
+        if len(input.shape) == 3:
+            return input[None, ...]
+        return input
 
 
 class output(activation):
@@ -299,11 +304,32 @@ class output(activation):
         self.prev_delta = output.derivative[self.type]((self.output, delta))
         return self.prev_delta
 
+class wta(activation):
+
+    def __init__(self, k, **kwargs):
+        activation.__init__(self, type='wta', **kwargs)
+        self.k = k
+
+
+    def __str__(self):
+        return 'Winner Takes All   ->   k = {}'.format(self.k)
+
+
+    def get_local_output(self, input):
+        ind = input.argpartition(-self.k, axis=1)[:, -self.k:]
+        i = np.arange(input.shape[0])[:,None]
+    
+        self.mask = np.zeros_like(input, dtype=bool)
+        self.mask[i, ind] = True
+        return input * self.mask
+
+    def backprop_delta(self, delta):
+        return delta * self.mask 
+    
 
 class dropout(activation):
 
-    def __init__(self, p, **kwargs):
-        self.type = 'dropout'
+    def __init__(self, p, type='dropout', **kwargs):
         activation.__init__(self, **kwargs)
         self.p = p
 
@@ -318,9 +344,8 @@ class dropout(activation):
 
 class dropcon(fully_connected):
 
-    def __init__(self, p, **kwargs):
+    def __init__(self, p, type='dropcon', **kwargs):
         fully_connected.__init__(self, **kwargs)
-        self.type = 'dropcon'
         self.p = p
 
     def get_local_output(self, input):

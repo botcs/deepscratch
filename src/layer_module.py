@@ -55,7 +55,8 @@ class AbstractLayer:
 
     def get_delta(self, target):
         if self.next:
-            self.delta = self.next.backprop(target)
+            # clip to mitigate exploding gradients
+            self.delta = np.clip(self.next.backprop(target), -5, 5)
             return self.delta
 
         return target
@@ -66,7 +67,7 @@ class AbstractLayer:
     def backprop(self, target):
         return self.backprop_delta(self.get_delta(target))
 
-    def train(self, rate):
+    def train(self, rate, **kwargs):
         pass
 
     def __str__(self):
@@ -81,11 +82,16 @@ class fully_connected(AbstractLayer):
         '''ROW REPRESENTS OUTPUT NEURON'''
         assert self.width is not None, "'shape=' or 'width=' must be defined"
         if self.prev:
-            self.weights = np.random.randn(self.width, self.prev.width)
-        self.bias = np.random.randn(self.width)
-
-        'Sharpening the deviation of initial values - less training required'
-        self.weights /= self.width
+            if kwargs.get('gaussian'):
+                self.weights = np.random.randn(self.width, self.prev.width)
+                self.bias = np.random.randn(self.width)
+            else:
+                self.weights = np.random.rand(self.width, self.prev.width)    
+                self.bias = np.random.rand(self.width)
+            
+            if kwargs.get('sharp'):
+                'Sharpening the deviation of initial values - regularization'
+                self.weights /= self.width
 
     def perturb(self, delta):
         'strictly experimental'
@@ -113,7 +119,24 @@ class fully_connected(AbstractLayer):
                          zip(self.input, self.delta)], axis=0).T,
                 np.mean(self.delta, axis=0))
 
-    def SGDtrain(self, rate):
+    def L2train(self, rate, reg):
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * (reg * self.weights + w_grad)
+        self.bias -= rate * b_grad
+
+    def L1train(self, rate, reg):
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * (reg * np.sign(self.weights) + w_grad)
+        self.bias -= rate * b_grad
+
+    def L05train(self, rate, reg):
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * (reg * self.weights /
+                                np.power(np.abs(self.weights), 3/2.) + w_grad)
+        self.bias -= rate * b_grad
+        
+
+    def SGDtrain(self, rate, reg):
         '''GRADIENT DESCENT TRAINING'''
         w_grad, b_grad = self.get_param_grad()
         self.weights -= rate * w_grad
@@ -210,6 +233,11 @@ class input(activation):
             warnings.simplefilter('always')
             activation.__init__(self, shape=shape,
                                 type='identity', **kwargs)
+                                
+    def get_local_output(self, input):
+        if len(input.shape) == 3:
+            return input[None, ...]
+        return input
 
 
 class output(activation):
@@ -241,9 +269,9 @@ class output(activation):
 
     crit = {
         'MSE': lambda (prediction, target):
-            0.5 * np.dot(prediction - target, prediction - target),
+            0.5 * np.sum((prediction - target)**2),
         'softmax': lambda (prediction, target):
-            np.dot(-target, np.log(prediction))
+            np.sum(-target * np.log(prediction), axis=1)
     }
 
     activation = {
@@ -276,11 +304,32 @@ class output(activation):
         self.prev_delta = output.derivative[self.type]((self.output, delta))
         return self.prev_delta
 
+class wta(activation):
+
+    def __init__(self, k, **kwargs):
+        activation.__init__(self, type='wta', **kwargs)
+        self.k = k
+
+
+    def __str__(self):
+        return 'Winner Takes All   ->   k = {}'.format(self.k)
+
+
+    def get_local_output(self, input):
+        ind = input.argpartition(-self.k, axis=1)[:, -self.k:]
+        i = np.arange(input.shape[0])[:,None]
+    
+        self.mask = np.zeros_like(input, dtype=bool)
+        self.mask[i, ind] = True
+        return input * self.mask
+
+    def backprop_delta(self, delta):
+        return delta * self.mask 
+    
 
 class dropout(activation):
 
-    def __init__(self, p, **kwargs):
-        self.type = 'dropout'
+    def __init__(self, p, type='dropout', **kwargs):
         activation.__init__(self, **kwargs)
         self.p = p
 
@@ -295,9 +344,8 @@ class dropout(activation):
 
 class dropcon(fully_connected):
 
-    def __init__(self, p, **kwargs):
+    def __init__(self, p, type='dropcon', **kwargs):
         fully_connected.__init__(self, **kwargs)
-        self.type = 'dropcon'
         self.p = p
 
     def get_local_output(self, input):

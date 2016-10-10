@@ -48,6 +48,10 @@ class network(object):
             cm.max_pool(prev=self.top, **kwargs))
         return self
 
+    def add_wta(self, k, **kwargs):
+        self.register_new_layer(lm.wta(k, prev=self.top, **kwargs))
+        return self        
+
     def add_dropcon(self, p, **kwargs):
         self.register_new_layer(lm.dropcon(p, prev=self.top, **kwargs))
         return self

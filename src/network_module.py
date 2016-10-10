@@ -1,8 +1,13 @@
+import sys
 import layer_module as lm
 import conv_module as cm
 import numpy as np
 import dill
 from utilities import StatusBar, ensure_dir
+
+
+def load(load):
+    return dill.load(open(load, 'rb'))
 
 
 class network(object):
@@ -42,6 +47,10 @@ class network(object):
         self.register_new_layer(
             cm.max_pool(prev=self.top, **kwargs))
         return self
+
+    def add_wta(self, k, **kwargs):
+        self.register_new_layer(lm.wta(k, prev=self.top, **kwargs))
+        return self        
 
     def add_dropcon(self, p, **kwargs):
         self.register_new_layer(lm.dropcon(p, prev=self.top, **kwargs))
@@ -86,9 +95,6 @@ class network(object):
         res += '\n' + '-' * 30
         return res
 
-    def load(self, load):
-        return cPickle.load(open(load, 'rb'))
-
     def __init__(self, in_shape, criterion, **kwargs):
         self.input = lm.input(in_shape)
         self.top = self.input
@@ -114,13 +120,21 @@ class network(object):
 
     'NETWORK TRAINING METHODS'
     def SGD(self, train_policy, training_set,
-            batch, rate,
+            batch, rate, L2=False, L1=False, L05=False, reg=0,
             validation_set=None, epoch_call_back=None, **kwargs):
 
         for l in self.layerlist:
             'Set the training method for layers where it is implemented'
+            assert L05 + L1 + L2 < 2, 'Regularisation cannot be mixed'
             try:
-                l.train = l.SGDtrain
+                if L2:
+                    l.train = l.L2train
+                elif L1:
+                    l.train = l.L1train
+                elif L05:
+                    l.train = l.L05train
+                else:
+                    l.train = l.SGDtrain
             except AttributeError:
                 continue
 
@@ -133,15 +147,21 @@ class network(object):
         while train_policy(training_set, validation_set, **kwargs):
             num_of_batches = len(input_set)/batch
             for b in xrange(num_of_batches):
+                ##for longer training some data should be useful
                 'FORWARD'
-                self.get_output(input_set[b::num_of_batches])
+                test = np.sum(self.get_output(input_set[b::num_of_batches]))
+                assert not (np.isnan(test) or np.isinf(test)),\
+                    "NaN found in output during train- shutting down..."
+                print('\r   batch: {} of {}'.format(
+                      b+1, num_of_batches)),
+                sys.stdout.flush()
 
                 'BACKWARD'
                 self.input.backprop(target_set[b::num_of_batches])
 
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
-                    l.train(rate)
+                    l.train(rate=rate, reg=reg)
 
             if epoch_call_back:
                 'Some logging function is called here'
@@ -173,27 +193,31 @@ class network(object):
         res = l.get_output(activation_set)
         return res.argsort(axis=0)[-top:]
 
-    def get_one_hot(self, layer_ind):
+    def get_one_hot(self, layer_ind, biased=False):
         '''get one-hot matrixes for each neuron in layer to prop back'''
         l = self[layer_ind]
         # number of neurons
         nn = np.prod(l.shape)
         # each neuron should have its own one-hot matrix so:
         # nn^2 zeros should do
-        oh = np.zeros(nn ** 2)
+        if biased:
+            oh = np.ones(nn ** 2) * -1
+        else:
+            oh = np.zeros(nn ** 2)
         # change 1 to simulate the ideal activation for that neuron
         # move this 1's index by nn + 1 to do so
+        
         oh[::nn + 1] = 1
 
         # return the well shaped form of one-hots
         return oh.reshape(l.shape + l.shape)
 
-    def backprop_one_hot(self, layer_ind, top=1):
+    def backprop_one_hot(self, layer_ind, top=1, biased=False):
         'Should be called after forwarding each neurons most intense input'
         # broadcast stands for multiple top activation for each neuron
 
         l = self[layer_ind]
-        oh = self.get_one_hot(layer_ind)
+        oh = self.get_one_hot(layer_ind, biased)
         oh = np.broadcast_to(oh, ((top,) + oh.shape)).reshape(-1, *l.shape)
         store = l.get_delta
         l.get_delta = lambda(x): oh
@@ -201,7 +225,7 @@ class network(object):
         l.get_delta = store
         return res
 
-    def grad_ascent(self, layer_ind, activation_set, top=9, epoch=5, rate=0.1):
+    def grad_ascent(self, layer_ind, activation_set, top=9, epoch=5, rate=0.1, biased=False):
         """get current layer's each neuron's strongest corresponding inputs'
         index in activation set
 
@@ -229,11 +253,13 @@ class network(object):
         """for correct batch inference it should be reshaped to (-1, 1, 28, 28)
         where '-1' stands for implicitly 9*3*24*24 (all that remains)
         """
-        
+        import sys
         l = self[layer_ind]
         for e in xrange(epoch):
+            print '\r GA: ', e + 1, '    ', 
+            sys.stdout.flush()
             l.get_output(input)
-            delta = self.backprop_one_hot(layer_ind, top).reshape(input.shape)
+            delta = self.backprop_one_hot(layer_ind, top, biased=biased).reshape(input.shape)
             input += rate * delta
-
+	print ' --- Done!'
         return input
