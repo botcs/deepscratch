@@ -239,6 +239,9 @@ class input(activation):
             return input[None, ...]
         return input
 
+    def backprop_delta(self, delta):
+        return delta.reshape(-1, *self.shape)
+
 
 class output(activation):
     '''Special type of activation layer, that has TWO kind of output:

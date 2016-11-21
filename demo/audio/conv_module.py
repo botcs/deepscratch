@@ -51,7 +51,7 @@ class Conv(lm.AbstractLayer):
         feature map activation is evaluated by summing their activations
         for each sample in input batch'''
         return np.sum(
-            [[[convolve2d(channel, kernel[::-1, ::-1], 'valid') #+ bias
+            [[[convolve2d(channel, kernel, 'valid') + bias
                for kernel in kernel_set]
               for channel, kernel_set, bias in zip(sample, self.kernels, self.bias)]
              for sample in self.input], axis=1)
@@ -59,19 +59,17 @@ class Conv(lm.AbstractLayer):
     def backprop_delta(self, delta):
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
-        # THE SCIPY convolve2d IS REVERSING THE KERNEL AUTOMATICALLY
         return np.sum([
-            [[convolve2d(k, d)
+            [[convolve2d(k[::-1, ::-1], d)
               for d, k in zip(sample_delta, kernel_set)]
              for kernel_set in self.kernels]
             for sample_delta in delta], axis=2)
         # saturating delta over 5 to prevent exploding gradient
 
     def get_param_grad(self):
-        # THE SCIPY convolve2d IS REVERSING THE KERNEL AUTOMATICALLY
         return (np.array(
             # KERNEL GRAD
-            [[[convolve2d(channel, d[::-1, ::-1], 'valid')
+            [[[convolve2d(channel, d, 'valid')
                for d in sample_delta]
               for channel in sample_input]
              for sample_input, sample_delta in zip(self.input, self.delta)]),
@@ -80,8 +78,8 @@ class Conv(lm.AbstractLayer):
 
     def SGDtrain(self, rate, **kwargs):
         k_update, b_update = self.get_param_grad()
-        self.kernels -= rate * k_update.mean(axis=0)
-        self.bias -= rate * b_update.mean(axis=0)
+        self.kernels -= rate * k_update.mean()
+        self.bias -= rate * b_update.mean()
 
 #    def L2train(self, rate, reg):
 #        k_update, b_update = self.get_param_grad()
