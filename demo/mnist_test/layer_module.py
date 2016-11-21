@@ -167,7 +167,7 @@ class activation(AbstractLayer):
     }
 
     derivative_functions = {
-        'identity': lambda x: np.ones(x.shape),
+        'identity': lambda x: np.ones_like(x),
         'relu': lambda x: 1.0 * (x > 0),
         'tanh': lambda x: 1.0 - np.square(np.tanh(x)),
         'atan': lambda x: 1.0 / (1.0 + x**2),
@@ -235,6 +235,7 @@ class input(activation):
                                 type='identity', **kwargs)
                                 
     def get_local_output(self, input):
+        self.input = input
         if len(input.shape) == 3:
             return input[None, ...]
         return input
