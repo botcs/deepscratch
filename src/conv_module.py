@@ -12,14 +12,6 @@ class Conv(lm.AbstractLayer):
         self.type = 'convolution'
         self.kernel_shape = kernel_shape
         self.nof = num_of_featmap
-        "prev layer's shape[0] is the number of output channels/feature maps"
-        if kwargs.get('gaussian'):
-            self.kernels = np.random.randn(
-                self.prev.shape[0], self.nof, *self.kernel_shape)
-        else:
-            self.kernels = np.random.rand(
-                self.prev.shape[0], self.nof, *self.kernel_shape)
-
 
         if self.prev:
             self.shape = (self.nof,)
@@ -36,6 +28,18 @@ class Conv(lm.AbstractLayer):
             'For fully connected next layer'
             self.width = np.prod(self.shape)
             self.bias = np.random.randn(self.nof)
+            
+            "prev layer's shape[0] is the number of output channels/feature maps"
+            if kwargs.get('gaussian'):
+                self.kernels = np.random.randn(
+                    self.prev.shape[0], self.nof, *self.kernel_shape)
+            else:
+                self.kernels = np.random.rand(
+                    self.prev.shape[0], self.nof, *self.kernel_shape)
+
+            if kwargs.get('sharp'):
+                'Sharpening the deviation of initial values - regularization'
+                self.kernels /= self.width
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray

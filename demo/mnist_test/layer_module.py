@@ -305,7 +305,7 @@ class output(activation):
         '''The delta of the output layer wouldn't be used for training
         so the function returns directly the delta of the previous layer
         '''
-        self.prev_delta = output.derivative[self.type]((self.output, delta))
+        self.prev_delta = output.derivative[self.type]((self.output, delta)).mean(axis=0)[None]
         return self.prev_delta
 
 class wta(activation):

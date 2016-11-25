@@ -71,8 +71,13 @@ class network(object):
         return self
 
     def add_shaper(self, shape, **kwargs):
-        self.register_new_layer(
-            lm.shaper(shape, prev=self.top, **kwargs))
+        if shape == -1:
+            self.register_new_layer(
+                lm.shaper(np.prod(self.top.shape), prev=self.top, **kwargs))    
+        else:
+            self.register_new_layer(
+                lm.shaper(shape, prev=self.top, **kwargs))    
+        
         return self
 
     def save_state(self, file_name):

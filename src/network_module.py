@@ -71,8 +71,13 @@ class network(object):
         return self
 
     def add_shaper(self, shape, **kwargs):
-        self.register_new_layer(
-            lm.shaper(shape, prev=self.top, **kwargs))
+        if shape == -1:
+            self.register_new_layer(
+                lm.shaper(np.prod(self.top.shape), prev=self.top, **kwargs))    
+        else:
+            self.register_new_layer(
+                lm.shaper(shape, prev=self.top, **kwargs))    
+        
         return self
 
     def save_state(self, file_name):
@@ -239,7 +244,6 @@ class network(object):
         """
 
         ind = self.max_act(layer_ind, activation_set, top)
-
         """retrieve those images from the activation_set, and forward them
         again
 
@@ -248,18 +252,24 @@ class network(object):
         (9, 3, 24, 24, ...) is described in the previous comment,
         and for each entry there are (..., 1, 28, 28) one channeled,
         28x28 image"""
-        input = activation_set[ind].reshape(-1, *self.input.shape)
-
+        input =  activation_set[ind].reshape(-1, *self.input.shape)
+        
         """for correct batch inference it should be reshaped to (-1, 1, 28, 28)
         where '-1' stands for implicitly 9*3*24*24 (all that remains)
         """
         import sys
+        
         l = self[layer_ind]
         for e in xrange(epoch):
             print '\r GA: ', e + 1, '    ', 
             sys.stdout.flush()
             l.get_output(input)
-            delta = self.backprop_one_hot(layer_ind, top, biased=biased).reshape(input.shape)
+            delta = self.backprop_one_hot(layer_ind, top, biased).reshape(input.shape)
+            
+        
             input += rate * delta
-	print ' --- Done!'
+            # normalize input
+            # input -= input.min(axis=0)
+            # input /= input.max(axis=0)
+        print ' --- Done!'
         return input
