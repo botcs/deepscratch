@@ -1,9 +1,9 @@
-from scipy.signal import convolve2d
 import numpy as np
 import layer_module as lm
 
 np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
+def conv2()
 
 class Conv(lm.AbstractLayer):
 
@@ -30,16 +30,18 @@ class Conv(lm.AbstractLayer):
             self.bias = np.random.randn(self.nof)
             
             "prev layer's shape[0] is the number of output channels/feature maps"
+            shape = (self.prev.shape[0], self.nof) + self.kernel_shape
             if kwargs.get('gaussian'):
-                self.kernels = np.random.randn(
-                    self.prev.shape[0], self.nof, *self.kernel_shape)
+                self.kernels = np.random.randn(shape)
+            elif kwargs.get('identity'):
+                self.kernels = np.tile(np.eye(self.kernel_shape[0], dtype=float), 
+                    (self.prev.shape[0], self.nof, 1, 1))
             else:
-                self.kernels = np.random.rand(
-                    self.prev.shape[0], self.nof, *self.kernel_shape)
+                self.kernels = np.random.rand(*shape)
 
             if kwargs.get('sharp'):
                 'Sharpening the deviation of initial values - regularization'
-                self.kernels /= self.width
+                self.kernels /= self.nof
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray
@@ -55,7 +57,7 @@ class Conv(lm.AbstractLayer):
         feature map activation is evaluated by summing their activations
         for each sample in input batch'''
         return np.sum(
-            [[[convolve2d(channel, kernel[::-1, ::-1], 'valid') #+ bias
+            [[[conv2(channel, kernel) #+ bias
                for kernel in kernel_set]
               for channel, kernel_set, bias in zip(sample, self.kernels, self.bias)]
              for sample in self.input], axis=1)
@@ -80,7 +82,7 @@ class Conv(lm.AbstractLayer):
               for channel in sample_input]
              for sample_input, sample_delta in zip(self.input, self.delta)]),
             # BIAS GRAD
-            np.sum(self.delta, axis=(1, 2, 3)))
+            np.sum(self.delta, axis=(2, 3)))
 
     def SGDtrain(self, rate, **kwargs):
         k_update, b_update = self.get_param_grad()

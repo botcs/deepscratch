@@ -30,20 +30,18 @@ class Conv(lm.AbstractLayer):
             self.bias = np.random.randn(self.nof)
             
             "prev layer's shape[0] is the number of output channels/feature maps"
+            shape = (self.prev.shape[0], self.nof) + self.kernel_shape
             if kwargs.get('gaussian'):
-                self.kernels = np.random.randn(
-                    self.prev.shape[0], self.nof, *self.kernel_shape)
+                self.kernels = np.random.randn(shape)
             elif kwargs.get('identity'):
-                self.kernels = np.zeros((
-                    self.prev.shape[0], self.nof) + self.kernel_shape, 
-		            dtype=float)
+                self.kernels = np.tile(np.eye(self.kernel_shape[0], dtype=float), 
+                    (self.prev.shape[0], self.nof, 1, 1))
             else:
-                self.kernels = np.random.rand(
-                    self.prev.shape[0], self.nof, *self.kernel_shape)
+                self.kernels = np.random.rand(*shape)
 
             if kwargs.get('sharp'):
                 'Sharpening the deviation of initial values - regularization'
-                self.kernels /= self.width
+                self.kernels /= self.nof
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray

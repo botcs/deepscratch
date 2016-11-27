@@ -1,6 +1,33 @@
 import sys
 import os
 import warnings
+import numpy as np
+
+def im2col(input2d, block_size):
+    #source http://stackoverflow.com/questions/30109068/implement-matlabs-im2col-sliding-in-python
+    
+    # A = np.random.randint(0,9,(8,5)) # Sample input array
+    # B = [2,4]                        # Sample blocksize (rows x columns)
+
+    A = input2d
+    B = block_size
+
+    # Parameters
+    M,N = A.shape
+    col_extent = N - B[1] + 1
+    row_extent = M - B[0] + 1
+
+    # Get Starting block indices
+    start_idx = np.arange(B[0])[:,None]*N + np.arange(B[1])
+
+    # Get offsetted indices across the height and width of input array
+    offset_idx = np.arange(row_extent)[:,None]*N + np.arange(col_extent)
+
+    # Get all actual indices & index into input array for final output
+    out = np.take (A,start_idx.ravel()[:,None] + offset_idx.ravel())
+    
+    return out
+
 
 
 def ensure_dir(f):
@@ -11,6 +38,7 @@ def ensure_dir(f):
         except OSError as e:
             print ('Cannot make directory: ' + str(e))
             raise
+
 
 
 def warning(message, instance, warn_type=FutureWarning):
