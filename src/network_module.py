@@ -42,6 +42,11 @@ class network(object):
         self.register_new_layer(
             cm.Conv(num_of_ker, kernel_shape, prev=self.top, **kwargs))
         return self
+        
+    def add_batchnorm(self, mean=0.5, std=1, **kwargs):
+        self.register_new_layer(
+            lm.batchnorm(mean, std, prev=self.top, **kwargs))
+        return self
 
     def add_maxpool(self, **kwargs):
         self.register_new_layer(
@@ -115,6 +120,9 @@ class network(object):
     def get_output(self, input):
         return self.output.get_output(input)
 
+    def get_crit(self, target):
+        return self.output.get_crit(target)
+
     def perc_eval(self, test_set):
         T = self.test_eval(test_set)
         return T * 100.0 / len(test_set)
@@ -126,7 +134,8 @@ class network(object):
     'NETWORK TRAINING METHODS'
     def SGD(self, train_policy, training_set,
             batch, rate, L2=False, L1=False, L05=False, reg=0,
-            validation_set=None, epoch_call_back=None, **kwargs):
+            validation_set=None, epoch_call_back=None, batch_call_back=None,
+            **kwargs):
 
         for l in self.layerlist:
             'Set the training method for layers where it is implemented'
@@ -151,26 +160,36 @@ class network(object):
             'input and training set is not equal in size'
         while train_policy(training_set, validation_set, **kwargs):
             num_of_batches = len(input_set)/batch
+            loss_list = np.zeros((num_of_batches,))
             for b in xrange(num_of_batches):
                 ##for longer training some data should be useful
                 'FORWARD'
-                test = np.sum(self.get_output(input_set[b::num_of_batches]))
+                test = np.sum(self.get_output(
+                    input_set[b::num_of_batches]))
                 assert not (np.isnan(test) or np.isinf(test)),\
                     "NaN found in output during train- shutting down..."
+                
+                loss = np.mean(self.get_crit(
+                    target_set[b::num_of_batches]))
+                loss_list[b] = loss
                 print('\r   batch: {} of {}'.format(
-                      b+1, num_of_batches)),
-                sys.stdout.flush()
-
+                      b+1, num_of_batches) ),
+                sys.stdout.flush()                
+                if batch_call_back:
+                    batch_call_back(loss)
+                    
+                
                 'BACKWARD'
                 self.input.backprop(target_set[b::num_of_batches])
-
+                
+                
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
                     l.train(rate=rate, reg=reg)
 
             if epoch_call_back:
                 'Some logging function is called here'
-                epoch_call_back()
+                epoch_call_back(loss_list)
 
     'NETWORK TRAINING POLICIES'
     def fix_epoch(self, training_set, validation_set, **kwargs):

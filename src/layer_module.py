@@ -56,8 +56,12 @@ class AbstractLayer:
     def get_delta(self, target):
         if self.next:
             # clip to mitigate exploding gradients
-            self.delta = np.clip(self.next.backprop(target), -5, 5)
-            return self.delta
+            delta = np.clip(self.next.backprop(target), -5, 5)
+            if np.count_nonzero(delta) == 0:
+                util.warning('Delta has no nonzero element!')
+#BETA            self.delta = delta.mean(axis=0)    # if only used for training?
+            self.delta = delta
+            return delta
 
         return target
 
@@ -192,7 +196,7 @@ class activation(AbstractLayer):
         return 'activation {}   ->   type: {}'.format(self.shape, self.type)
 
     def get_local_output(self, input):
-        self.input = input
+        self.input = input.mean(axis=0)
         return self.act(input)
 
     def backprop_delta(self, delta):
@@ -296,17 +300,38 @@ class output(activation):
     def get_local_output(self, input):
         return output.activation[self.type](input)
 
-    def get_crit(self, input, target):
+    def get_crit(self, target):
+        assert self.output.shape == target.shape, \
+            'last inference SHAPE {} does not match target SHAPE {}'.\
+            format(self.output.shape, target.shape)
         'double paren for lambda wrap'
-        self.get_output(input)
         return output.crit[self.type]((self.output, target))
 
     def backprop_delta(self, delta):
         '''The delta of the output layer wouldn't be used for training
         so the function returns directly the delta of the previous layer
         '''
-        self.prev_delta = output.derivative[self.type]((self.output, delta)).mean(axis=0)[None]
+        self.prev_delta = output.derivative[self.type]((self.output, delta))
         return self.prev_delta
+
+class batchnorm(activation):
+    def __init__(self, mean=0.5, std=1.0, **kwargs):
+        activation.__init__(self, type='batch norm', **kwargs)
+        self.mean = mean
+        self.std = std
+        
+    def __str__(self):
+        return 'batch norm {}   ->   mean = {}, std = {}'.\
+            format(self.shape, self.mean, self.std)
+        
+    def get_local_output(self, input):
+        self.input = input.mean(axis=0)
+        self.batch_std = input.std()
+        res = input / self.batch_std / self.std
+        return res - res.mean() + self.mean
+        
+    def backprop_delta(self, delta):
+        return delta * self.input / self.batch_std / self.std
 
 class wta(activation):
 
