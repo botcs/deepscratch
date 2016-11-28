@@ -165,21 +165,58 @@ class Conv(lm.AbstractLayer):
 
 class max_pool(lm.AbstractLayer):
 
-    def __init__(self, pool_shape=(2, 2), shape=None, **kwargs):
-        lm.AbstractLayer.__init__(self, shape=shape, type='max pool', **kwargs)
+    def __init__(self, pool_shape=(2, 2), stride=(2, 2), shape=None, **kwargs):
+        
         assert (shape is None) ^ (pool_shape is None),\
             "'pool_shape=' XOR 'shape=' must be defined"
-
+      
+        '''aggfunc will be applied to pools aggregating their values to one
+           restriction is, that it should be able to applied np.arrays and
+           have argument "axis="
+        '''
+        
+        if type(pool_shape) == int:
+            pool_shape = (pool_shape, pool_shape)
+        
+        if type(stride) == int:
+            stride = (stride, stride)
+        
+        lm.AbstractLayer.__init__(self, shape=shape, type='max pool', **kwargs)
         if self.prev:
             if shape:
                 sp = np.divide(self.prev.shape, shape)
                 '''First dimension is the number of feature maps in the previous
                    layer'''
                 self.pool_shape = tuple(sp[1:])
+                self.stride = self.pool_shape
             else:
                 self.pool_shape = pool_shape
-                self.shape = tuple(np.divide(self.prev.shape, (1,)+pool_shape))
+                self.stride = stride
+                C, N, M = self.prev.shape
+                n, m = self.pool_shape
+                s1, s2 = self.stride
+                ver = (N-n)/s1 + 1
+                hor = (M-m)/s2 + 1
+                self.shape = (C, ver, hor)
                 self.width = np.prod(self.shape)
+
+    def get_local_output_inference(self, input):
+
+        if len(input.shape) == 3:
+            'if input is a single sample, extend it to a 1 sized batch'
+            x = np.expand_dims(input, 0)
+        else:
+            x = input
+        
+        batch = len(x)   
+        '''Channels are not pooled,
+           transform to (batch*channel, 1, ...) shape'''
+        x = x.reshape(-1, 1, *x.shape[2:])
+        col = batch_im2col(x, self.pool_shape, self.stride)
+        
+        out = col.max(axis=1)
+        
+        return out.reshape((batch,) + self.shape)
 
     def get_local_output(self, input):
 
@@ -210,6 +247,7 @@ class max_pool(lm.AbstractLayer):
         return res.reshape(batch, N, h/n, w/m, n, m)\
                   .transpose(0, 1, 2, 4, 3, 5)\
                   .reshape(batch, N, h, w)
+
 
     def __str__(self):
         res = lm.AbstractLayer.__str__(self)
