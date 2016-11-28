@@ -1,6 +1,6 @@
 import numpy as np
 import layer_module as lm
-from utilities import im2col
+from utilities import batch_im2col
 
 np.set_printoptions(precision=2, edgeitems=2, threshold=10)
 
@@ -91,10 +91,9 @@ class Conv(lm.AbstractLayer):
            col.shape == (W, C*n*m)
         '''
 
-        col = [im2col(sample, self.kernel_shape, self.stride).T 
-                for sample in self.input]
+        col = batch_im2col(self.input, self.kernel_shape, self.stride)\
+            .swapaxes(1,2)
         
-        # THIS COULD BE SPEED UP BY IMPLEMENTING batch_im2col   
         batch = input.shape[0]                  
         output = np.inner(col, self.kernels.reshape(self.kernels.shape[0], -1)).\
             swapaxes(2,1).reshape((batch, ) + self.shape)
@@ -117,8 +116,7 @@ class Conv(lm.AbstractLayer):
         padded = padded[..., ::-1, ::-1]
         batch = delta.shape[0]
         
-        col = [im2col(sample, self.kernel_shape, self.stride).T 
-                for sample in padded]
+        col = batch_im2col(padded, self.kernel_shape, self.stride).swapaxes(1,2)
                                 
         
         '''Now deltas of different feature map are the Channels
@@ -137,8 +135,8 @@ class Conv(lm.AbstractLayer):
         batch = self.delta.shape[0]
     
         swapim = self.input.swapaxes(0,1)
-        col = [im2col(channel, self.delta.shape[2:], self.stride).T
-                for channel in swapim]
+        col = batch_im2col(swapim, self.delta.shape[2:], self.stride)\
+            .swapaxes(1,2)
         
 
         swapdel = self.delta.swapaxes(0,1).reshape(self.delta.shape[1], -1)
