@@ -141,8 +141,8 @@ class Conv(lm.AbstractLayer):
                 for channel in swapim]
         
 
-        swapdel = self.delta.swapaxes(0,1)
-        swapdel.shape = (swapdel.shape[0], -1)
+        swapdel = self.delta.swapaxes(0,1).reshape(self.delta.shape[1], -1)
+        
         dw = np.inner(col, swapdel).swapaxes(2,1).reshape(self.kernels.shape)
         
         db = swapdel.sum(axis=1)
@@ -151,8 +151,8 @@ class Conv(lm.AbstractLayer):
 
     def SGDtrain(self, rate, **kwargs):
         k_update, b_update = self.get_param_grad()
-        self.kernels -= rate * k_update.mean(axis=0)
-        self.bias -= rate * b_update.mean(axis=0)
+        self.kernels -= rate * k_update
+        self.bias -= rate * b_update
 
 #    def L2train(self, rate, reg):
 #        k_update, b_update = self.get_param_grad()
