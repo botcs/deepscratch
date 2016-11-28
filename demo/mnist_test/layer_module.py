@@ -56,10 +56,12 @@ class AbstractLayer:
     def get_delta(self, target):
         if self.next:
             # clip to mitigate exploding gradients
-            self.delta = np.clip(self.next.backprop(target), -5, 5)
-            if np.count_nonzero(self.delta) == 0:
+            delta = np.clip(self.next.backprop(target), -5, 5)
+            if np.count_nonzero(delta) == 0:
                 util.warning('Delta has no nonzero element!')
-            return self.delta
+#BETA            self.delta = delta.mean(axis=0)    # if only used for training?
+            self.delta = delta
+            return delta
 
         return target
 
@@ -309,7 +311,7 @@ class output(activation):
         '''The delta of the output layer wouldn't be used for training
         so the function returns directly the delta of the previous layer
         '''
-        self.prev_delta = output.derivative[self.type]((self.output, delta)).mean(axis=0)[None]
+        self.prev_delta = output.derivative[self.type]((self.output, delta))
         return self.prev_delta
 
 class batchnorm(activation):

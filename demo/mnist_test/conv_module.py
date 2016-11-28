@@ -134,15 +134,20 @@ class Conv(lm.AbstractLayer):
         return output
 
     def get_param_grad(self):
-        # THE SCIPY convolve2d IS REVERSING THE KERNEL AUTOMATICALLY
-        return (np.array(
-            # KERNEL GRAD
-            [[[convolve2d(channel, d[::-1, ::-1], 'valid')
-               for d in sample_delta]
-              for channel in sample_input]
-             for sample_input, sample_delta in zip(self.input, self.delta)]),
-            # BIAS GRAD
-            np.sum(self.delta, axis=(2, 3)))
+        batch = self.delta.shape[0]
+    
+        swapim = self.input.swapaxes(0,1)
+        col = [im2col(channel, self.delta.shape[2:], self.stride).T
+                for channel in swapim]
+        
+
+        swapdel = self.delta.swapaxes(0,1)
+        swapdel.shape = (swapdel.shape[0], -1)
+        dw = np.inner(col, swapdel).swapaxes(2,1).reshape(self.kernels.shape)
+        
+        db = swapdel.sum(axis=1)
+        
+        return dw/batch, db/batch
 
     def SGDtrain(self, rate, **kwargs):
         k_update, b_update = self.get_param_grad()
