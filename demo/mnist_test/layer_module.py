@@ -122,8 +122,8 @@ class fully_connected(AbstractLayer):
 
     def get_param_grad(self):
         'weight and bias gradient'
-        return (np.outer(self.input, self.delta.mean(axis=0)),
-                self.delta.mean(axis=0))
+        return np.outer(self.input, self.delta.mean(axis=0)).T,\
+            self.delta.mean(axis=0)
 
     def L2train(self, rate, reg):
         w_grad, b_grad = self.get_param_grad()
