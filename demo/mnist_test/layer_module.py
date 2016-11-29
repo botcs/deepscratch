@@ -55,11 +55,11 @@ class AbstractLayer:
 
     def get_delta(self, target):
         if self.next:
+            delta = self.next.backprop(target)
             # clip to mitigate exploding gradients
-            delta = np.clip(self.next.backprop(target), -5, 5)
+            # delta = np.clip(self.next.backprop(target), -50, 50)
             if np.count_nonzero(delta) == 0:
-                util.warning('Delta has no nonzero element!')
-#BETA            self.delta = delta.mean(axis=0)    # if only used for training?
+                util.warning('Delta has no nonzero element!', self)
             self.delta = delta
             return delta
 
@@ -107,11 +107,14 @@ class fully_connected(AbstractLayer):
         'input will be required for training'
         if len(input.shape) == 1:
             'if input is a single sample, extend it to a 1 sized batch'
-            self.input = np.expand_dims(input, 0)
-        else:
-            self.input = input
-
-        return np.dot(self.input, self.weights.T) + self.bias
+            input = np.expand_dims(input, 0)
+        
+        'only the batch mean will be used for training'
+        self.input = input.mean(0)
+        
+        return np.dot(input, self.weights.T) + self.bias
+        
+        
 
     def backprop_delta(self, delta):
         assert self.next, 'Missing next layer, delta cannot be evaluated'
@@ -119,9 +122,8 @@ class fully_connected(AbstractLayer):
 
     def get_param_grad(self):
         'weight and bias gradient'
-        return (np.mean([np.outer(i, d) for i, d in
-                         zip(self.input, self.delta)], axis=0).T,
-                np.mean(self.delta, axis=0))
+        return (np.outer(self.input, self.delta.mean(axis=0)),
+                self.delta.mean(axis=0))
 
     def L2train(self, rate, reg):
         w_grad, b_grad = self.get_param_grad()
@@ -311,8 +313,8 @@ class output(activation):
         '''The delta of the output layer wouldn't be used for training
         so the function returns directly the delta of the previous layer
         '''
-        self.prev_delta = output.derivative[self.type]((self.output, delta))
-        return self.prev_delta
+        prev_delta = output.derivative[self.type]((self.output, delta))
+        return prev_delta
 
 class batchnorm(activation):
     def __init__(self, mean=0.5, std=1.0, **kwargs):

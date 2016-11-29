@@ -10,7 +10,7 @@ class Conv(lm.AbstractLayer):
         lm.AbstractLayer.__init__(self, **kwargs)
         self.type = 'convolution'
         self.kernel_shape = kernel_shape
-        self.nof = num_of_featmap
+        self.depth = num_of_featmap
         self.stride = stride
 
         if self.prev:
@@ -20,25 +20,27 @@ class Conv(lm.AbstractLayer):
             S1, S2 = self.stride
             ver = (N-n)/S1 +1
             hor = (M-m)/S2 +1
-            self.shape = (self.nof, ver, hor)    
+            self.shape = (self.depth, ver, hor)    
             
             'For fully connected next layer'
             self.width = np.prod(self.shape)
             
-            self.bias = np.random.randn(self.nof)
+            self.bias = np.random.randn(self.depth)
             "prev layer's shape[0] is the number of output channels/feature maps"
 
             if kwargs.get('gaussian'):
-                self.kernels = np.random.randn((self.nof, C, n, m))
+                self.kernels = np.random.randn((self.depth, C, n, m))
             elif kwargs.get('identity'):
                 self.kernels = np.tile(np.eye(self.kernel_shape[0], dtype=float), 
-                    (self.nof, C, 1, 1))
+                    (self.depth, C, 1, 1))
             else:
-                self.kernels = np.random.rand(self.nof, C, n, m)
+                self.kernels = np.random.rand(self.depth, C, n, m)
 
+            self.bias = np.zeros(self.depth)            
+            
             if kwargs.get('sharp'):
                 'Sharpening the deviation of initial values - regularization'
-                self.kernels /= self.nof
+                self.kernels /= self.depth
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray
@@ -98,7 +100,7 @@ class Conv(lm.AbstractLayer):
         output = np.inner(col, self.kernels.reshape(self.kernels.shape[0], -1)).\
             swapaxes(2,1).reshape((batch, ) + self.shape)
                     
-        return output
+        return output + self.bias[None, :, None, None]
 
     def backprop_delta(self, delta):
         '''Each feature map is the result of all previous layer maps,
@@ -138,7 +140,6 @@ class Conv(lm.AbstractLayer):
         col = batch_im2col(swapim, self.delta.shape[2:], self.stride)\
             .swapaxes(1,2)
         
-
         swapdel = self.delta.swapaxes(0,1).reshape(self.delta.shape[1], -1)
         
         dw = np.inner(col, swapdel).swapaxes(2,1).reshape(self.kernels.shape)

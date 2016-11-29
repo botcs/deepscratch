@@ -186,8 +186,7 @@ class network(object):
                 self.input.backprop(target_set[b::num_of_batches])
                 
                 
-	        # red_rate = np.exp(-self.last_epoch/10.0) * rate
-		red_rate = rate
+                red_rate = np.exp(-self.last_epoch/6.0) * rate
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
                     l.train(rate=red_rate, reg=reg)

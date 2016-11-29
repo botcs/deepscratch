@@ -62,14 +62,13 @@ def batch_im2col(input2d, block_size, skip):
     start_idx=(didx[None, :, None]+start_idx.ravel()).reshape((-1,B[0],B[1]))
 
     # Get offsetted indices across the height and width of input array
-    offset_idx = np.arange(row_extent)[None, :, None]*N + np.arange(col_extent)
+    offset_idx = np.arange(row_extent)[None, :, None]*N + np.arange(col_extent)[None, :]
 
     # Get all actual indices & index into input array for final output
     act_idx = (batch_idx + 
         start_idx.ravel()[None, :, None] + 
-        offset_idx[::skip[0],::skip[1]].ravel())
-    print act_idx.shape
-    #print act_idx
+        offset_idx[:,::skip[0],::skip[1]].ravel())
+    
     out = np.take (A, act_idx)
     
     return out
