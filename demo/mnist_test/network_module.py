@@ -158,10 +158,13 @@ class network(object):
         
         assert len(input_set) == len(target_set),\
             'input and training set is not equal in size'
-        while train_policy(training_set, validation_set, **kwargs):
+
+	while train_policy(training_set, validation_set, **kwargs):
             num_of_batches = len(input_set)/batch
             loss_list = np.zeros((num_of_batches,))
+
             for b in xrange(num_of_batches):
+		
                 ##for longer training some data should be useful
                 'FORWARD'
                 test = np.sum(self.get_output(
@@ -183,9 +186,11 @@ class network(object):
                 self.input.backprop(target_set[b::num_of_batches])
                 
                 
+	        # red_rate = np.exp(-self.last_epoch/10.0) * rate
+		red_rate = rate
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
-                    l.train(rate=rate, reg=reg)
+                    l.train(rate=red_rate, reg=reg)
 
             if epoch_call_back:
                 'Some logging function is called here'

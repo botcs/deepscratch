@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 'must be in the working directory, or in the python path'
 import network_module as nm
 
+netname = 'newtest---25conv3-10conv3-10conv-5'
+
 def loadmnist():
     import cPickle, gzip, numpy
 
@@ -26,40 +28,51 @@ print 'Loading MNIST images...'
 train, valid, test = loadmnist()
 
 # truncating sets
-trunc=100
+trunc=50000
 train = (train[0][0:trunc], train[1][0:trunc])
 valid = (valid[0][0:trunc/10], valid[1][0:trunc/10])
 print 'constructing network'
 #########################
 # NETWORK DEFINITION
 nn = nm.network(in_shape=train[0][0].shape, criterion='softmax')
-nn.add_conv(3, (9, 9))
-nn.add_maxpool(pool_shape=(2, 2))
+nn.add_conv(25, (3, 3), sharp=True)
 nn.add_activation('relu')
-nn.add_conv(3, (3, 3))
-# # nn.add_maxpool(pool_shape=(2, 2))
-# nn.add_activation('tanh')
+nn.add_conv(10, (3, 3), sharp=True)
+nn.add_activation('relu')
+nn.add_conv(10, (5, 5), sharp=True)
+nn.add_activation('relu')
 nn.add_shaper(np.prod(nn[-1].shape))
-
 nn.add_activation('tanh')
-
-nn.add_full(10)
+nn.add_full(10, sharp=True)
 #########################
 print nn
 
 result = []
 
 
-def print_test():
-    print nn.last_epoch, ' ', nn.test_eval(valid)
-    result.append((nn.test_eval(train), nn.test_eval(valid)))
+def print_test(loss_list):
+    global result
+    result.append(np.mean(loss_list))
+    print ' --- Epoch: ', nn.last_epoch,\
+    '  Mean loss: ', np.mean(loss_list)
+    
+def print_loss(loss):
+    global result
+    result += loss
+    print loss
 
-
-print 'Training network... '
-nn.SGD(train_policy=nn.fix_epoch, training_set=train,
-       batch=16, rate=0.05, epoch_call_back=print_test, epoch=10)
-
-
+print 'Working with network:', netname
+def train_net():
+  print 'Training network:', netname
+  nn.SGD(train_policy=nn.fix_epoch,
+         training_set=train,
+         batch=20, rate=0.01, 
+         epoch_call_back=print_test, 
+         epoch=25)
+         
+  nn.save_state('./nets/{}.net'.format(netname))       
+         
+         
 def imshow(im, cmap='Greys_r', interpol='None'):
     import matplotlib.pyplot as plt
     if len(im.shape) == 3:
@@ -77,10 +90,6 @@ def imshow(im, cmap='Greys_r', interpol='None'):
     plt.show()
     return im.shape
 
-# imshow(nn.get_output(test_data[0]))
-# test = nn.get_output(test_data[0:3]) * 100
-# im = zip(test_data[0:3], test, nn[1].backprop_delta(test))
-# imshow(im[2])
 
 def print_result():
     plt.show(plt.plot(result))
@@ -102,5 +111,5 @@ def __main__():
     loadmnist()
 
 if __name__ == '__main__':
-    main()
+    __main__()
     
