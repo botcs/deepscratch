@@ -1,4 +1,4 @@
-# *Deep Scratch** - *A deep learning lib from scratch*
+# *Deep Scratch* - *A deep learning lib from scratch*
 ## (or from numpy by the way)
 
 ## Main purposes:
