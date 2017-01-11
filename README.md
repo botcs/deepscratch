@@ -1,13 +1,12 @@
-# **Deep Vision** - *A lib from scratch*
-## (or from scipy by the way)
+# *Deep Scratch** - *A deep learning lib from scratch*
+## (or from numpy by the way)
 
 ## Main purposes:
 It became easier to understand (for me, of course) the following models:
 - [x] [MLP](http://neuralnetworksanddeeplearning.com/),
 - [x] [ConvNet](http://neuralnetworksanddeeplearning.com/),
 - [x] [DeConvNet](http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf),
-- [ ] [RBM](http://deeplearning.net/tutorial/rbm.html),
-- [ ] [RNN](http://karpathy.github.io/2015/05/21/rnn-effectiveness/)
+- [x] [RBM](http://deeplearning.net/tutorial/rbm.html),
 
 ## When I started to implement
 these models myself, everything became brighter, more intuitive, sometimes obvius - compared to the mathematical formulas representing a clear idea
